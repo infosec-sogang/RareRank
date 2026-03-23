@@ -764,6 +764,34 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
 
   q->skipdet_e = (struct skipdet_entry *)ck_alloc(sizeof(struct skipdet_entry));
 
+  /* Code added to record the exact time of seed generation (using the timestamp
+   * of Linux system yields imprecise result for some seeds in the queue). */
+  char exec_time_path[PATH_MAX] = {0};
+  snprintf(exec_time_path, PATH_MAX, "%s", afl->out_dir); // Use the outdir as the base path
+
+  // Append "/tc_birth.csv" to the base path
+  strncat(exec_time_path, "/tc_birth.csv", PATH_MAX - strlen(exec_time_path) - 1);
+
+  // Open the file in append mode
+  FILE *fp = fopen(exec_time_path, "a");
+  if (fp == NULL) {
+    printf("Error in opening file: %s\n", exec_time_path);
+    return;
+  }
+
+  // Write the data to the file
+  char *queue_pos = strstr((char *)fname, "/queue/");
+  u64 path_time_sec = 0;
+  if (queue_pos) {
+    path_time_sec = afl->last_find_time - afl->start_time;
+  } else {
+    u8* fn = strrchr((char *)fname, '/');
+    fname = alloc_printf("%s/queue/id:%06u,orig:%s", afl->out_dir, afl->queued_items - 1, fn + 1);
+  }
+  fprintf(fp, "\"%s\",%llu\n", fname, path_time_sec / 1000);
+
+  fclose(fp);
+
 }
 
 /* Destroy the entire queue. */
