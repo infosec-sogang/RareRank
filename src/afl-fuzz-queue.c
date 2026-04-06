@@ -786,7 +786,7 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
     path_time_sec = afl->last_find_time - afl->start_time;
   } else {
     u8* fn = strrchr((char *)fname, '/');
-    fname = alloc_printf("%s/queue/id:%06u,orig:%s", afl->out_dir, afl->queued_items - 1, fn + 1);
+    fname = alloc_printf("%s/queue/id:%06u,time:0,execs:%llu,orig:%s", afl->out_dir, afl->queued_items - 1, afl->fsrv.total_execs, fn + 1);
   }
   fprintf(fp, "\"%s\",%llu\n", fname, path_time_sec / 1000);
 
