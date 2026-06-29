@@ -3384,6 +3384,17 @@ int main(int argc, char **argv_orig, char **envp) {
                   runs_in_current_cycle > afl->queued_items) ||
                  (afl->old_seed_selection && !afl->queue_cur))) {
 
+      /* Log the cycle that just finished (skip the very first entry, where no
+         cycle has run yet), then reset per-cycle accounting for the new one. */
+
+      if (likely(afl->queue_cycle)) { write_cycle_stats(afl); }
+
+      afl->cycle_start_time = get_cur_time();
+      afl->cycle_start_queued = afl->queued_items;
+      afl->cycle_start_execs = afl->fsrv.total_execs;
+      afl->cycle_favored_fuzzed = 0;
+      afl->cycle_normal_fuzzed = 0;
+
       if (unlikely((afl->last_sync_cycle < afl->queue_cycle ||
                     (!afl->queue_cycle && afl->afl_env.afl_import_first)) &&
                    afl->sync_id)) {

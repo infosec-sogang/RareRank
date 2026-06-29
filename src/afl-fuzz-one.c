@@ -432,6 +432,16 @@ u8 fuzz_one_original(afl_state_t *afl) {
 
   afl->queue_cur->fuzz_count++;
 
+  if (afl->queue_cur->favored) {
+
+    ++afl->cycle_favored_fuzzed;
+
+  } else {
+
+    ++afl->cycle_normal_fuzzed;
+
+  }
+
   if (likely(afl->not_on_tty)) {
 
     u8 time_tmp[64];
@@ -3787,6 +3797,16 @@ static u8 mopt_common_fuzzing(afl_state_t *afl, MOpt_globals_t MOpt_globals) {
   /* We've committed to fuzzing this seed; count the pass. */
 
   afl->queue_cur->fuzz_count++;
+
+  if (afl->queue_cur->favored) {
+
+    ++afl->cycle_favored_fuzzed;
+
+  } else {
+
+    ++afl->cycle_normal_fuzzed;
+
+  }
 
   if (afl->not_on_tty) {
 

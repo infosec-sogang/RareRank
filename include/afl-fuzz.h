@@ -693,6 +693,13 @@ typedef struct afl_state {
   u32    *alias_table;                /* alias weighted random lookup table */
   u32     active_items;                 /* enabled entries in the queue     */
 
+  /* Per-cycle accounting for the "cycle_stats" log (one line per cycle). */
+  u64 cycle_start_time,                 /* Wall-clock ms when cycle started */
+      cycle_start_execs;                /* total_execs snapshot at cyc start*/
+  u32 cycle_start_queued,               /* queued_items snapshot at cyc strt*/
+      cycle_favored_fuzzed,             /* favored seeds fuzzed this cycle  */
+      cycle_normal_fuzzed;              /* normal seeds fuzzed this cycle   */
+
   u8 *var_bytes;                        /* Bytes that appear to be variable */
 
 #define N_FUZZ_SIZE (1 << 21)
@@ -1344,6 +1351,7 @@ void load_stats_file(afl_state_t *);
 void write_setup_file(afl_state_t *, u32, char **);
 void write_stats_file(afl_state_t *, u32, double, double, double);
 void write_seed_stats(afl_state_t *);
+void write_cycle_stats(afl_state_t *);
 void maybe_update_plot_file(afl_state_t *, u32, double, double);
 void write_queue_stats(afl_state_t *);
 void make_space_for_stats();

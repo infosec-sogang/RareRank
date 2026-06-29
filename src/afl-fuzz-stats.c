@@ -565,6 +565,43 @@ void write_seed_stats(afl_state_t *afl) {
 
 }
 
+/* Append one summary line for the queue cycle that just finished to the
+   "cycle_stats" file. Call this at a cycle boundary, BEFORE resetting the
+   per-cycle counters and BEFORE incrementing afl->queue_cycle. */
+
+void write_cycle_stats(afl_state_t *afl) {
+
+  u8 *fn = alloc_printf("%s/cycle_stats", afl->out_dir);
+  s32 fd;
+  FILE *f;
+
+  fd = open(fn, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_PERMISSION);
+
+  if (fd < 0) { PFATAL("Unable to create '%s'", fn); }
+
+  ck_free(fn);
+
+  f = fdopen(fd, "a");
+
+  if (!f) { PFATAL("fdopen() failed"); }
+
+  u64 elapsed_ms = get_cur_time() - afl->cycle_start_time;
+  u32 total_fuzzed = afl->cycle_favored_fuzzed + afl->cycle_normal_fuzzed;
+  u32 new_seeds = afl->queued_items - afl->cycle_start_queued;
+  u64 execs_in_cycle = afl->fsrv.total_execs - afl->cycle_start_execs;
+
+  fprintf(f,
+          "cycle %llu, took %llu ms, fuzzed %u seeds (%u favored, %u normal), "
+          "now %u seeds (%u active, %u favored), %u new seeds, %llu execs\n",
+          afl->queue_cycle, elapsed_ms, total_fuzzed,
+          afl->cycle_favored_fuzzed, afl->cycle_normal_fuzzed,
+          afl->queued_items, afl->active_items, afl->queued_favored, new_seeds,
+          execs_in_cycle);
+
+  fclose(f);
+
+}
+
 #ifdef INTROSPECTION
 void write_queue_stats(afl_state_t *afl) {
 
