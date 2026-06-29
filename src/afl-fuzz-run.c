@@ -1467,7 +1467,18 @@ u8 __attribute__((hot)) common_fuzz_stuff(afl_state_t *afl, u8 *out_buf,
 
   /* This handles FAULT_ERROR for us: */
 
-  afl->queued_discovered += save_if_interesting(afl, out_buf, len, fault);
+  u8 was_interesting = save_if_interesting(afl, out_buf, len, fault);
+  afl->queued_discovered += was_interesting;
+
+  /* If the mutated input was interesting enough to be queued, credit the
+     parent (queue_cur) and remember the cycle in which it happened. */
+
+  if (was_interesting && afl->queue_cur) {
+
+    afl->queue_cur->found_children++;
+    afl->queue_cur->last_find_cycle = afl->queue_cycle;
+
+  }
 
   if (!(afl->stage_cur % afl->stats_update_freq) ||
       afl->stage_cur + 1 == afl->stage_max) {

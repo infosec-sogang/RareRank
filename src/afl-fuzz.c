@@ -3410,6 +3410,10 @@ int main(int argc, char **argv_orig, char **envp) {
       runs_in_current_cycle = (u32)-1;
       afl->cur_skipped_items = 0;
 
+      /* Dump per-seed statistics for the cycle that just finished. */
+
+      if (afl->queue_cycle > 1) { write_seed_stats(afl); }
+
       // 1st april fool joke - enable pizza mode
       // to not waste time on checking the date we only do this when the
       // queue is fully cycled.
@@ -3739,6 +3743,7 @@ stop_fuzzing:
   afl->stop_soon = 1;        // ensure everything is written
   show_stats(afl);           // print the screen one last time
   write_bitmap(afl);
+  write_seed_stats(afl);
   save_auto(afl);
 
   #ifdef __AFL_CODE_COVERAGE

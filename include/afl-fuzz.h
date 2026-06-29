@@ -273,11 +273,16 @@ struct queue_entry {
       has_new_cov,                      /* Triggers new coverage?           */
       var_behavior,                     /* Variable behavior?               */
       favored,                          /* Currently favored?               */
+      ever_favored,                     /* Ever been favored?               */
       fs_redundant,                     /* Marked as redundant in the fs?   */
       is_ascii,                         /* Is the input just ascii text?    */
       disabled;                         /* Is disabled from fuzz selection  */
 
   u32 bitmap_size,                      /* Number of bits set in bitmap     */
+      found_cycle,                      /* Cycle in which this seed was found */
+      fuzz_count,                       /* Times fuzz_one() fuzzed this seed */
+      found_children,                   /* Interesting children produced    */
+      last_find_cycle,                  /* Last cycle that found a child    */
 #ifdef INTROSPECTION
       stats_selected,                   /* stats: how often selected        */
       stats_skipped,                    /* stats: how often skipped         */
@@ -1338,6 +1343,7 @@ void destroy_extras(afl_state_t *);
 void load_stats_file(afl_state_t *);
 void write_setup_file(afl_state_t *, u32, char **);
 void write_stats_file(afl_state_t *, u32, double, double, double);
+void write_seed_stats(afl_state_t *);
 void maybe_update_plot_file(afl_state_t *, u32, double, double);
 void write_queue_stats(afl_state_t *);
 void make_space_for_stats();

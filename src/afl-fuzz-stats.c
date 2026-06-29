@@ -529,6 +529,42 @@ void write_stats_file(afl_state_t *afl, u32 t_bytes, double bitmap_cvg,
 
 }
 
+/* Write per-seed statistics to the "seed_stats" file, one row per queue entry.
+   Called at the end of every queue cycle. */
+
+void write_seed_stats(afl_state_t *afl) {
+
+  u8 *fn = alloc_printf("%s/seed_stats", afl->out_dir);
+  s32 fd;
+  FILE *f;
+  u32  i;
+
+  fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_PERMISSION);
+
+  if (fd < 0) { PFATAL("Unable to create '%s'", fn); }
+
+  ck_free(fn);
+
+  f = fdopen(fd, "w");
+
+  if (!f) { PFATAL("fdopen() failed"); }
+
+  for (i = 0; i < afl->queued_items; i++) {
+
+    struct queue_entry *q = afl->queue_buf[i];
+
+    fprintf(f, "%u, %s, %s, found at %u, fuzzed %u, %u children, last at %u\n",
+            q->id, q->favored ? "Favored" : "Normal",
+            q->ever_favored ? "Y" : "N",
+            q->found_cycle, q->fuzz_count, q->found_children,
+            q->last_find_cycle);
+
+  }
+
+  fclose(f);
+
+}
+
 #ifdef INTROSPECTION
 void write_queue_stats(afl_state_t *afl) {
 

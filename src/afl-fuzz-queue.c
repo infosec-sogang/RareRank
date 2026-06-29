@@ -685,6 +685,8 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
   q->fname = fname;
   q->len = len;
 
+  q->found_cycle = afl->queue_cycle;
+
   q->depth = afl->cur_depth + 1;
   q->passed_det = passed_det;
   q->mother = afl->queue_cur;
@@ -1013,6 +1015,7 @@ void cull_queue(afl_state_t *afl) {
       if (!afl->top_rated[i]->favored && !afl->top_rated[i]->disabled) {
 
         afl->top_rated[i]->favored = 1;
+        afl->top_rated[i]->ever_favored = 1;
         ++afl->queued_favored;
 
         if (!afl->top_rated[i]->was_fuzzed) {

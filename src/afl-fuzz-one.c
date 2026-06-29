@@ -428,6 +428,10 @@ u8 fuzz_one_original(afl_state_t *afl) {
 
 #endif                                                     /* ^IGNORE_FINDS */
 
+  /* We've committed to fuzzing this seed; count the pass. */
+
+  afl->queue_cur->fuzz_count++;
+
   if (likely(afl->not_on_tty)) {
 
     u8 time_tmp[64];
@@ -3779,6 +3783,10 @@ static u8 mopt_common_fuzzing(afl_state_t *afl, MOpt_globals_t MOpt_globals) {
   }
 
 #endif                                                     /* ^IGNORE_FINDS */
+
+  /* We've committed to fuzzing this seed; count the pass. */
+
+  afl->queue_cur->fuzz_count++;
 
   if (afl->not_on_tty) {
 
