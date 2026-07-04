@@ -276,6 +276,7 @@ struct queue_entry {
       ever_favored,                     /* Ever been favored?               */
       fs_redundant,                     /* Marked as redundant in the fs?   */
       is_ascii,                         /* Is the input just ascii text?    */
+      edge_cov_counted,                 /* Already updated cover_count[]?  */
       disabled;                         /* Is disabled from fuzz selection  */
 
   u32 bitmap_size,                      /* Number of bits set in bitmap     */
@@ -812,6 +813,8 @@ typedef struct afl_state {
   struct queue_entry **queue_buf;
 
   struct queue_entry **top_rated;           /* Top entries for bitmap bytes */
+
+  u64 *cover_count;         /* Per-edge count of queued seeds covering it   */
 
   u32 **top_rated_candidates;             /* Candidate IDs per bitmap index */
 

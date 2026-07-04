@@ -883,11 +883,19 @@ void update_bitmap_score(afl_state_t *afl, struct queue_entry *q,
 
   if (have_trace) {
 
+    /* Count each queued seed's edge coverage only once, even though
+       update_bitmap_score() may run several times per seed (calibration,
+       re-calibration after trimming, ...). */
+    u8 count_cover = !q->edge_cov_counted;
+
     /* For every byte set in afl->fsrv.trace_bits[], see if there is a previous
        winner, and how it compares to us. */
     for (i = 0; i < afl->fsrv.map_size; ++i) {
 
       if (afl->fsrv.trace_bits[i]) {
+
+        /* Count that this newly queued test case covers edge i. */
+        if (count_cover) { ++afl->cover_count[i]; }
 
         if (afl->top_rated[i]) {
 
@@ -956,6 +964,8 @@ void update_bitmap_score(afl_state_t *afl, struct queue_entry *q,
       }
 
     }
+
+    if (count_cover) { q->edge_cov_counted = 1; }
 
   }
 
