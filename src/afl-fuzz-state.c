@@ -103,6 +103,7 @@ void afl_state_init(afl_state_t *afl, uint32_t map_size) {
   afl->skip_deterministic = 0;
   afl->sync_time = SYNC_TIME;
   afl->cmplog_lvl = 2;
+  afl->extract_ratio = 0.1;            /* -r: rare-edge extraction ratio    */
   afl->min_length = 1;
   afl->max_length = MAX_FILE;
   afl->switch_fuzz_mode = STRATEGY_SWITCH_TIME * 1000;
@@ -120,6 +121,7 @@ void afl_state_init(afl_state_t *afl, uint32_t map_size) {
   afl->var_bytes = ck_alloc(map_size);
   afl->top_rated = ck_alloc(map_size * sizeof(void *));
   afl->cover_count = ck_alloc(map_size * sizeof(u64));
+  afl->sorted_edges = ck_alloc(map_size * sizeof(u32));
   afl->clean_trace = ck_alloc(map_size);
   afl->clean_trace_custom = ck_alloc(map_size);
   afl->first_trace = ck_alloc(map_size);
@@ -173,6 +175,7 @@ void afl_resize_map_buffers(afl_state_t *afl, u32 old_size, u32 new_size) {
   afl->var_bytes = ck_realloc(afl->var_bytes, new_size);
   afl->top_rated = ck_realloc(afl->top_rated, new_size * sizeof(void *));
   afl->cover_count = ck_realloc(afl->cover_count, new_size * sizeof(u64));
+  afl->sorted_edges = ck_realloc(afl->sorted_edges, new_size * sizeof(u32));
   afl->clean_trace = ck_realloc(afl->clean_trace, new_size);
   afl->clean_trace_custom = ck_realloc(afl->clean_trace_custom, new_size);
   afl->first_trace = ck_realloc(afl->first_trace, new_size);
@@ -957,6 +960,7 @@ void afl_state_deinit(afl_state_t *afl) {
   ck_free(afl->var_bytes);
   ck_free(afl->top_rated);
   ck_free(afl->cover_count);
+  ck_free(afl->sorted_edges);
   ck_free(afl->clean_trace);
   ck_free(afl->clean_trace_custom);
   ck_free(afl->first_trace);

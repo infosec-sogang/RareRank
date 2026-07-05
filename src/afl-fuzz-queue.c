@@ -984,6 +984,100 @@ static inline u64 now_ns(void) {
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+}
+
+/* Sort key for extract_and_sort(): file-scope pointer to the cover_count[]
+   whose values order the edges. Set right before qsort(); afl-fuzz is
+   single-threaded here so this is safe. */
+
+static u64 *cover_count_sort_ref = NULL;
+
+static int compare_edge_by_cover(const void *a, const void *b) {
+
+  u32 ea = *(const u32 *)a;
+  u32 eb = *(const u32 *)b;
+  u64 ca = cover_count_sort_ref[ea];
+  u64 cb = cover_count_sort_ref[eb];
+
+  if (ca < cb) { return -1; }
+  if (ca > cb) { return 1; }
+  /* Tie-break by edge id for a stable, deterministic ordering. */
+  return (ea < eb) ? -1 : (ea > eb) ? 1 : 0;
+
+}
+
+/* Extract every edge whose cover_count[] hit-count lies within [min, max] into
+   the pre-allocated afl->sorted_edges[] array, ordered by ascending hit count
+   (ties broken by edge id). The number of extracted edges is stored in
+   afl->sorted_edges_cnt, so the result can be enumerated later as
+   afl->sorted_edges[0 .. sorted_edges_cnt-1].
+
+   The destination array is allocated once in afl_state_init() (sized to the
+   full map) and reused on every call - no per-call allocation. */
+
+void extract_and_sort(afl_state_t *afl, u64 min, u64 max) {
+
+  u32 cnt = 0;
+  u32 i;
+
+  for (i = 0; i < afl->fsrv.map_size; ++i) {
+
+    u64 c = afl->cover_count[i];
+    if (c >= min && c <= max) { afl->sorted_edges[cnt++] = i; }
+
+  }
+
+  cover_count_sort_ref = afl->cover_count;
+  qsort(afl->sorted_edges, cnt, sizeof(u32), compare_edge_by_cover);
+  cover_count_sort_ref = NULL;
+
+  afl->sorted_edges_cnt = cnt;
+
+}
+
+/* Cull one edge: if its top_rated winner still has uncovered bits in temp_v,
+   claim them and mark it favored. Shared by both cull_queue() passes. */
+
+static void cull_edge(afl_state_t *afl, u32 i, u8 *temp_v, u32 len) {
+
+  if (afl->top_rated[i] && (temp_v[i >> 3] & (1 << (i & 7))) &&
+      afl->top_rated[i]->trace_mini) {
+
+    u32 j = len;
+
+    /* Remove all bits belonging to the current entry from temp_v. */
+
+    while (j--) {
+
+      if (afl->top_rated[i]->trace_mini[j]) {
+
+        temp_v[j] &= ~afl->top_rated[i]->trace_mini[j];
+
+      }
+
+    }
+
+    if (!afl->top_rated[i]->favored && !afl->top_rated[i]->disabled) {
+
+      afl->top_rated[i]->favored = 1;
+      afl->top_rated[i]->ever_favored = 1;
+      ++afl->queued_favored;
+
+      if (!afl->top_rated[i]->was_fuzzed) {
+
+        ++afl->pending_favored;
+        if (unlikely(afl->smallest_favored < 0 ||
+                     afl->smallest_favored > (s64)afl->top_rated[i]->id)) {
+
+          afl->smallest_favored = (s64)afl->top_rated[i]->id;
+
+        }
+
+      }
+
+    }
+
+  }
 
 }
 
@@ -1012,53 +1106,35 @@ void cull_queue(afl_state_t *afl) {
 
   }
 
-  /* Let's see if anything in the bitmap isn't captured in temp_v.
-     If yes, and if it has a afl->top_rated[] contender, let's use it. */
-
   afl->smallest_favored = -1;
 
-  for (i = 0; i < afl->fsrv.map_size; ++i) {
+  /* Extract and sort rare edges and cull with them first. Starts from the
+     second cycle. */
 
-    if (afl->top_rated[i] && (temp_v[i >> 3] & (1 << (i & 7))) &&
-        afl->top_rated[i]->trace_mini) {
+  if (afl->queue_cycle > 1) {
 
-      u32 j = len;
+    u64 n = afl->queued_items;
+    extract_and_sort(afl, 1, (u64)(afl->extract_ratio * n));
 
-      /* Remove all bits belonging to the current entry from temp_v. */
+    for (i = 0; i < afl->sorted_edges_cnt; ++i) {
 
-      while (j--) {
-
-        if (afl->top_rated[i]->trace_mini[j]) {
-
-          temp_v[j] &= ~afl->top_rated[i]->trace_mini[j];
-
-        }
-
-      }
-
-      if (!afl->top_rated[i]->favored && !afl->top_rated[i]->disabled) {
-
-        afl->top_rated[i]->favored = 1;
-        afl->top_rated[i]->ever_favored = 1;
-        ++afl->queued_favored;
-
-        if (!afl->top_rated[i]->was_fuzzed) {
-
-          ++afl->pending_favored;
-          if (unlikely(afl->smallest_favored < 0 ||
-                       afl->smallest_favored > (s64)afl->top_rated[i]->id)) {
-
-            afl->smallest_favored = (s64)afl->top_rated[i]->id;
-
-          }
-
-        }
-
-      }
+      cull_edge(afl, afl->sorted_edges[i], temp_v, len);
 
     }
 
   }
+
+  /* Favored picked so far come from the rare-edge pass (0 in cycle 1). */
+  u32 favored_first = afl->queued_favored;
+
+  /* Full-map pass: covers remaining bits (rare edges already cleared). */
+  for (i = 0; i < afl->fsrv.map_size; ++i) {
+
+    cull_edge(afl, i, temp_v, len);
+
+  }
+
+  u32 favored_second = afl->queued_favored - favored_first;
 
   for (i = 0; i < afl->queued_items; i++) {
 
@@ -1070,9 +1146,12 @@ void cull_queue(afl_state_t *afl) {
 
   }
 
+
   afl->reinit_table = 1;
 
   afl->cull_time_ns += now_ns() - t_start;
+
+  write_cull_stats(afl, favored_first, favored_second);
 
 }
 

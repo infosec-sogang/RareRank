@@ -816,6 +816,10 @@ typedef struct afl_state {
 
   u64 *cover_count;         /* Per-edge count of queued seeds covering it   */
 
+  u32 *sorted_edges;        /* Edges extracted by extract_and_sort(), sorted */
+  u32  sorted_edges_cnt;    /* Number of valid entries in sorted_edges[]     */
+  double extract_ratio;     /* -r: rare-edge extraction ratio (of N)         */
+
   u32 **top_rated_candidates;             /* Candidate IDs per bitmap index */
 
   struct extra_data *extras;            /* Extra tokens to fuzz with        */
@@ -1302,6 +1306,7 @@ void add_to_queue(afl_state_t *, u8 *, u32, u8);
 void destroy_queue(afl_state_t *);
 void update_bitmap_score(afl_state_t *, struct queue_entry *, bool);
 void cull_queue(afl_state_t *);
+void extract_and_sort(afl_state_t *, u64 min, u64 max);
 u32  calculate_score(afl_state_t *, struct queue_entry *);
 void recalculate_all_scores(afl_state_t *);
 void update_bitmap_rescore(afl_state_t *, struct queue_entry *, u32);
@@ -1356,6 +1361,7 @@ void write_setup_file(afl_state_t *, u32, char **);
 void write_stats_file(afl_state_t *, u32, double, double, double);
 void write_seed_stats(afl_state_t *);
 void write_cycle_stats(afl_state_t *);
+void write_cull_stats(afl_state_t *, u32 favored_first, u32 favored_second);
 void maybe_update_plot_file(afl_state_t *, u32, double, double);
 void write_queue_stats(afl_state_t *);
 void make_space_for_stats();

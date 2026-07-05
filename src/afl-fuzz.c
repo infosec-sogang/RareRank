@@ -277,6 +277,8 @@ static void usage(u8 *argv0, int more_help) {
       "Fuzzing behavior settings:\n"
       "  -Z             - sequential queue selection instead of weighted "
       "random\n"
+      "  -r ratio       - rare-edge extraction ratio for culling, 0.0-1.0 "
+      "(default 0.1)\n"
       "  -N             - do not unlink the fuzzing input file (for devices "
       "etc.)\n"
       "  -n             - fuzz without instrumentation (non-instrumented "
@@ -718,7 +720,7 @@ int main(int argc, char **argv_orig, char **envp) {
   // still available: HjJkqrv
   while ((opt = getopt(
               argc, argv,
-              "+a:Ab:B:c:CdDe:E:f:F:g:G:hi:I:K:l:L:m:M:nNo:Op:P:QRs:S:t:T:"
+              "+a:Ab:B:c:CdDe:E:f:F:g:G:hi:I:K:l:L:m:M:nNo:Op:P:Qr:Rs:S:t:T:"
               "uUV:w:WXx:YzZ")) > 0) {
 
     switch (opt) {
@@ -806,6 +808,21 @@ int main(int argc, char **argv_orig, char **envp) {
       case 'Z':
         afl->old_seed_selection = 1;
         break;
+
+      case 'r': {                            /* rare-edge extraction ratio */
+
+        char *endptr = NULL;
+        afl->extract_ratio = strtod(optarg, &endptr);
+        if (endptr == optarg || *endptr != 0 || afl->extract_ratio < 0.0 ||
+            afl->extract_ratio > 1.0) {
+
+          FATAL("Bad value for -r, expected a ratio between 0.0 and 1.0");
+
+        }
+
+        break;
+
+      }
 
       case 'u':
         afl->use_splicing = 1;

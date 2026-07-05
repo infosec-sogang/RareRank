@@ -603,6 +603,33 @@ void write_cycle_stats(afl_state_t *afl) {
 
 }
 
+/* Append one line per meaningful cull_queue() call to the "cull_stats" file:
+   total queued items, and favored picked by the rare-edge pass (first loop)
+   and the full-map pass (second loop). */
+
+void write_cull_stats(afl_state_t *afl, u32 favored_first, u32 favored_second) {
+
+  u8 *fn = alloc_printf("%s/cull_stats", afl->out_dir);
+  s32 fd = open(fn, O_WRONLY | O_CREAT | O_APPEND, DEFAULT_PERMISSION);
+
+  if (fd < 0) { PFATAL("Unable to create '%s'", fn); }
+
+  ck_free(fn);
+
+  FILE *f = fdopen(fd, "a");
+
+  if (!f) { PFATAL("fdopen() failed"); }
+
+  fprintf(f,
+          "cycle %llu, %u queued, %u favored (%u rare-edge round, %u original "
+          "round)\n",
+          afl->queue_cycle, afl->queued_items, favored_first + favored_second,
+          favored_first, favored_second);
+
+  fclose(f);
+
+}
+
 #ifdef INTROSPECTION
 void write_queue_stats(afl_state_t *afl) {
 
