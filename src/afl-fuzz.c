@@ -3480,17 +3480,15 @@ int main(int argc, char **argv_orig, char **envp) {
 
       if (unlikely(afl->old_seed_selection)) {
 
-        afl->current_entry = 0;
-        while (unlikely(afl->current_entry < afl->queued_items &&
-                        afl->queue_buf[afl->current_entry]->disabled)) {
+        /* New cycle: clear the per-seed visited flags and restart the walk.
+           visit_order[] itself is kept up to date by cull_queue(). */
+        for (u32 vi = 0; vi < afl->queued_items; ++vi) {
 
-          ++afl->current_entry;
+          afl->queue_buf[vi]->fuzzed_this_cycle = 0;
 
         }
 
-        if (afl->current_entry >= afl->queued_items) { afl->current_entry = 0; }
-
-        afl->queue_cur = afl->queue_buf[afl->current_entry];
+        afl->visit_order_pos = 0;
 
         if (unlikely(seek_to)) {
 
@@ -3501,9 +3499,28 @@ int main(int argc, char **argv_orig, char **envp) {
 
           }
 
-          afl->current_entry = seek_to;
+          /* Resume by fuzzing the saved seed first; its exact position within
+             the priority order is not otherwise preserved. */
+          afl->queue_buf[seek_to]->fuzzed_this_cycle = 1;
           afl->queue_cur = afl->queue_buf[seek_to];
+          afl->current_entry = seek_to;
           seek_to = 0;
+
+        } else {
+
+          afl->queue_cur = select_next_visit(afl);
+
+          if (unlikely(!afl->queue_cur)) {
+
+            /* No active seed (should not happen); fall back to entry 0. */
+            afl->current_entry = 0;
+            afl->queue_cur = afl->queue_buf[0];
+
+          } else {
+
+            afl->current_entry = afl->queue_cur->id;
+
+          }
 
         }
 
@@ -3735,19 +3752,12 @@ int main(int argc, char **argv_orig, char **envp) {
 
       if (unlikely(afl->old_seed_selection)) {
 
-        while (++afl->current_entry < afl->queued_items &&
-               afl->queue_buf[afl->current_entry]->disabled) {};
-        if (unlikely(afl->current_entry >= afl->queued_items ||
-                     afl->queue_buf[afl->current_entry] == NULL ||
-                     afl->queue_buf[afl->current_entry]->disabled)) {
+        /* Pick the next unvisited, highest-priority seed. A mid-cycle cull may
+           have re-sorted visit_order and reset the cursor; already-visited
+           seeds stay flagged and are skipped. NULL ends the cycle. */
+        afl->queue_cur = select_next_visit(afl);
 
-          afl->queue_cur = NULL;
-
-        } else {
-
-          afl->queue_cur = afl->queue_buf[afl->current_entry];
-
-        }
+        if (likely(afl->queue_cur)) { afl->current_entry = afl->queue_cur->id; }
 
       }
 

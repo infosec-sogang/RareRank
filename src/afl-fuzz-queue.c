@@ -1084,6 +1084,72 @@ static void cull_edge(afl_state_t *afl, u32 i, u8 *temp_v, u32 len) {
 
 }
 
+/* Order two seeds for the -Z visit order, using (rank, id) as the key. */
+
+static int compare_by_rank_and_id(const void *a, const void *b) {
+
+  const struct queue_entry *qa = *(const struct queue_entry *const *)a;
+  const struct queue_entry *qb = *(const struct queue_entry *const *)b;
+
+  if (qa->rank != qb->rank) { return (qa->rank < qb->rank) ? -1 : 1; }
+  return (qa->id < qb->id) ? -1 : (qa->id > qb->id) ? 1 : 0;
+
+}
+
+/* Rebuild the -Z visit order: collect all active (non-disabled) seeds and sort
+   them, then reset the traversal cursor. Called at the end of cull_queue() to
+   reflect freshly assigned ranks. */
+
+void build_visit_order(afl_state_t *afl) {
+
+  afl->visit_order = (struct queue_entry **)afl_realloc(
+      (void **)&afl->visit_order,
+      afl->queued_items * sizeof(struct queue_entry *));
+
+  u32 cnt = 0;
+  for (u32 i = 0; i < afl->queued_items; ++i) {
+
+    if (likely(!afl->queue_buf[i]->disabled)) {
+
+      afl->visit_order[cnt++] = afl->queue_buf[i];
+
+    }
+
+  }
+
+  qsort(afl->visit_order, cnt, sizeof(struct queue_entry *),
+        compare_by_rank_and_id);
+
+  afl->visit_order_cnt = cnt;
+  afl->visit_order_pos = 0;
+
+}
+
+/* Return the next seed to visit: the first entry in visit_order that has not
+   been visited yet. Mark it as visited (so it is not selected again in this
+   cycle) and return it; return NULL when the cycle is exhausted. */
+
+struct queue_entry *select_next_visit(afl_state_t *afl) {
+
+  while (afl->visit_order_pos < afl->visit_order_cnt) {
+
+    struct queue_entry *q = afl->visit_order[afl->visit_order_pos];
+
+    if (!q->fuzzed_this_cycle && !q->disabled) {
+
+      q->fuzzed_this_cycle = 1;
+      return q;
+
+    }
+
+    ++afl->visit_order_pos;
+
+  }
+
+  return NULL;
+
+}
+
 void cull_queue(afl_state_t *afl) {
 
   if (likely(!afl->score_changed || afl->non_instrumented_mode)) { return; }
@@ -1166,6 +1232,10 @@ void cull_queue(afl_state_t *afl) {
 
   }
 
+
+  /* Rebuild the visit order with the computed ranks. Runs on every meaningful
+     cull (including mid-cycle ones). */
+  if (unlikely(afl->old_seed_selection)) { build_visit_order(afl); }
 
   afl->reinit_table = 1;
 

@@ -278,7 +278,8 @@ struct queue_entry {
       ever_favored,                     /* Ever been favored?               */
       fs_redundant,                     /* Marked as redundant in the fs?   */
       is_ascii,                         /* Is the input just ascii text?    */
-      edge_cov_counted,                 /* Already updated cover_count[]?  */
+      edge_cov_counted,                 /* Already updated cover_count[]?   */
+      fuzzed_this_cycle,                /* Visited in the current -Z cycle? */
       disabled;                         /* Is disabled from fuzz selection  */
 
   u32 bitmap_size,                      /* Number of bits set in bitmap     */
@@ -817,6 +818,12 @@ typedef struct afl_state {
 
   struct queue_entry **top_rated;           /* Top entries for bitmap bytes */
 
+  /* Visit order used for sequential mode (-Z). Cyclic queue traversed using
+     (rank, id) as the ordering key. */
+  struct queue_entry **visit_order;         /* seeds sorted by (rank, id)    */
+  u32 visit_order_cnt;                      /* entries for the current cycle */
+  u32 visit_order_pos;                      /* cursor into visit_order[]     */
+
   u64 *cover_count;         /* Per-edge count of queued seeds covering it   */
 
   u32 *sorted_edges;        /* Edges extracted by extract_and_sort(), sorted */
@@ -1311,6 +1318,8 @@ void destroy_queue(afl_state_t *);
 void update_bitmap_score(afl_state_t *, struct queue_entry *, bool);
 void cull_queue(afl_state_t *);
 void extract_and_sort(afl_state_t *, u64 min, u64 max);
+void build_visit_order(afl_state_t *);
+struct queue_entry *select_next_visit(afl_state_t *);
 u32  calculate_score(afl_state_t *, struct queue_entry *);
 void recalculate_all_scores(afl_state_t *);
 void update_bitmap_rescore(afl_state_t *, struct queue_entry *, u32);
