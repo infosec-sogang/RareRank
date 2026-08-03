@@ -104,6 +104,7 @@ void afl_state_init(afl_state_t *afl, uint32_t map_size) {
   afl->sync_time = SYNC_TIME;
   afl->cmplog_lvl = 2;
   afl->extract_ratio = 0.1;            /* -r: rare-edge extraction ratio    */
+  afl->skip_coeff = 0.90;              /* -k: coefficient for skip prob.    */
   afl->min_length = 1;
   afl->max_length = MAX_FILE;
   afl->switch_fuzz_mode = STRATEGY_SWITCH_TIME * 1000;

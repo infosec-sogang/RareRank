@@ -279,6 +279,8 @@ static void usage(u8 *argv0, int more_help) {
       "random\n"
       "  -r ratio       - rare-edge extraction ratio for culling, 0.0-1.0 "
       "(default 0.1)\n"
+      "  -k coeff       - rank-based skip probability coefficient, 0.0-1.0 "
+      "(default 0.90)\n"
       "  -N             - do not unlink the fuzzing input file (for devices "
       "etc.)\n"
       "  -n             - fuzz without instrumentation (non-instrumented "
@@ -717,10 +719,10 @@ int main(int argc, char **argv_orig, char **envp) {
 
   afl->shmem_testcase_mode = 1;  // we always try to perform shmem fuzzing
 
-  // still available: HjJkqrv
+  // still available: HjJqv
   while ((opt = getopt(
               argc, argv,
-              "+a:Ab:B:c:CdDe:E:f:F:g:G:hi:I:K:l:L:m:M:nNo:Op:P:Qr:Rs:S:t:T:"
+              "+a:Ab:B:c:CdDe:E:f:F:g:G:hi:I:k:K:l:L:m:M:nNo:Op:P:Qr:Rs:S:t:T:"
               "uUV:w:WXx:YzZ")) > 0) {
 
     switch (opt) {
@@ -817,6 +819,21 @@ int main(int argc, char **argv_orig, char **envp) {
             afl->extract_ratio > 1.0) {
 
           FATAL("Bad value for -r, expected a ratio between 0.0 and 1.0");
+
+        }
+
+        break;
+
+      }
+
+      case 'k': {                        /* rank-based skip-prob coefficient */
+
+        char *endptr = NULL;
+        afl->skip_coeff = strtod(optarg, &endptr);
+        if (endptr == optarg || *endptr != 0 || afl->skip_coeff < 0.0 ||
+            afl->skip_coeff > 1.0) {
+
+          FATAL("Bad value for -k, expected a coefficient between 0.0 and 1.0");
 
         }
 

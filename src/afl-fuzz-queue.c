@@ -692,6 +692,8 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
   q->mother = afl->queue_cur;
   q->weight = 1.0;
   q->perf_score = 100;
+  q->rank = -1;                /* Not ranked until the next cull_queue().   */
+  q->skip_prob = -1.0;         /* Rank not assigned yet, just skip.         */
 
 #ifdef INTROSPECTION
   q->bitsmap_size = afl->bitsmap_size;
@@ -1061,7 +1063,8 @@ static void cull_edge(afl_state_t *afl, u32 i, u8 *temp_v, u32 len) {
 
       afl->top_rated[i]->favored = 1;
       afl->top_rated[i]->ever_favored = 1;
-      ++afl->queued_favored;
+      /* Rank in culling order: 0 for the first favored, 1 for the next, ... */
+      afl->top_rated[i]->rank = afl->queued_favored++;
 
       if (!afl->top_rated[i]->was_fuzzed) {
 
@@ -1140,7 +1143,24 @@ void cull_queue(afl_state_t *afl) {
 
     if (likely(!afl->queue_buf[i]->disabled)) {
 
-      mark_as_redundant(afl, afl->queue_buf[i], !afl->queue_buf[i]->favored);
+      struct queue_entry *q = afl->queue_buf[i];
+
+      mark_as_redundant(afl, q, !q->favored);
+
+      /* Assign ranks for normal (non-favored) seeds. */
+      if (!q->favored) { q->rank = afl->queued_items - 1; }
+
+      /* Compute skip probabilities for the seed. */
+      if (q->rank < 0) { /* Unreachable condition, but just in case. */
+
+        q->skip_prob = -1.0;
+
+      } else {
+
+        double r = (double)q->rank / (double)afl->queued_items;
+        q->skip_prob = afl->skip_coeff * r * r;
+
+      }
 
     }
 

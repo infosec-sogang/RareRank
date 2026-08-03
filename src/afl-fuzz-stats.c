@@ -554,11 +554,12 @@ void write_seed_stats(afl_state_t *afl) {
 
     struct queue_entry *q = afl->queue_buf[i];
 
-    fprintf(f, "%u, %s, %s, found at %u, fuzzed %u, %u children, last at %u\n",
+    fprintf(f,
+            "%u, %s, %s, rank %d, found at %u, fuzzed %u, %u children, last at "
+            "%u\n",
             q->id, q->favored ? "Favored" : "Normal",
-            q->ever_favored ? "Y" : "N",
-            q->found_cycle, q->fuzz_count, q->found_children,
-            q->last_find_cycle);
+            q->ever_favored ? "Y" : "N", q->rank, q->found_cycle, q->fuzz_count,
+            q->found_children, q->last_find_cycle);
 
   }
 

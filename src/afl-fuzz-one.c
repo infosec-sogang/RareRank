@@ -393,36 +393,12 @@ u8 fuzz_one_original(afl_state_t *afl) {
 
   }
 
-  if (likely(afl->pending_favored)) {
+  /* Skip this seed with its rank-derived probability. For a negative skip_prob
+     (rank not yet assigned), just skip it. */
+  if (afl->queue_cur->skip_prob < 0.0 ||
+      rand_next_percent(afl) < afl->queue_cur->skip_prob) {
 
-    /* If we have any favored, non-fuzzed new arrivals in the queue,
-       possibly skip to them at the expense of already-fuzzed or non-favored
-       cases. */
-
-    if ((afl->queue_cur->fuzz_level || !afl->queue_cur->favored) &&
-        likely(rand_below(afl, 100) < SKIP_TO_NEW_PROB)) {
-
-      return 1;
-
-    }
-
-  } else if (!afl->non_instrumented_mode && !afl->queue_cur->favored &&
-
-             afl->queued_items > 10) {
-
-    /* Otherwise, still possibly skip non-favored cases, albeit less often.
-       The odds of skipping stuff are higher for already-fuzzed inputs and
-       lower for never-fuzzed entries. */
-
-    if (afl->queue_cycle > 1 && !afl->queue_cur->fuzz_level) {
-
-      if (likely(rand_below(afl, 100) < SKIP_NFAV_NEW_PROB)) { return 1; }
-
-    } else {
-
-      if (likely(rand_below(afl, 100) < SKIP_NFAV_OLD_PROB)) { return 1; }
-
-    }
+    return 1;
 
   }
 

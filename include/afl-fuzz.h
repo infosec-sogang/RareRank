@@ -263,6 +263,8 @@ struct queue_entry {
   u8 *fname;                            /* File name for the test case      */
   u32 len;                              /* Input length                     */
   u32 id;                               /* entry number in queue_buf        */
+  s32 rank;                             /* Culling order (0=first favored,
+                                           -1=unranked)                     */
 
   u8 colorized,                         /* Do not run redqueen stage again  */
       cal_failed;                       /* Calibration failed?              */
@@ -308,7 +310,8 @@ struct queue_entry {
 #endif
 
   double perf_score,                    /* performance score                */
-      weight;
+      weight,
+      skip_prob;                        /* Skip probability for this seed    */
 
   struct queue_entry *mother;            /* queue entry this based on        */
   u8                 *trace_mini;        /* Trace bytes, if kept             */
@@ -819,6 +822,7 @@ typedef struct afl_state {
   u32 *sorted_edges;        /* Edges extracted by extract_and_sort(), sorted */
   u32  sorted_edges_cnt;    /* Number of valid entries in sorted_edges[]     */
   double extract_ratio;     /* -r: rare-edge extraction ratio (of N)         */
+  double skip_coeff;        /* -k: skip-probability coefficient (rank-based) */
 
   u32 **top_rated_candidates;             /* Candidate IDs per bitmap index */
 
