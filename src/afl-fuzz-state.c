@@ -108,6 +108,7 @@ void afl_state_init(afl_state_t *afl, uint32_t map_size) {
   afl->min_length = 1;
   afl->max_length = MAX_FILE;
   afl->switch_fuzz_mode = STRATEGY_SWITCH_TIME * 1000;
+  afl->old_seed_selection = 1; /* Use sequential selection for our scheduling */
   afl->q_testcase_max_cache_size = TESTCASE_CACHE_SIZE * 1048576UL;
   afl->q_testcase_max_cache_entries = 64 * 1024;
   afl->last_scored_idx = -1;
