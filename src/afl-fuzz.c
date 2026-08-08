@@ -280,7 +280,7 @@ static void usage(u8 *argv0, int more_help) {
       "  -r ratio       - rare-edge extraction ratio for culling, 0.0-1.0 "
       "(default 0.1)\n"
       "  -k coeff       - rank-based skip probability coefficient, 0.0-1.0 "
-      "(default 0.90)\n"
+      "(default 0.98)\n"
       "  -N             - do not unlink the fuzzing input file (for devices "
       "etc.)\n"
       "  -n             - fuzz without instrumentation (non-instrumented "
