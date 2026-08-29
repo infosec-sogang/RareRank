@@ -967,9 +967,23 @@ void update_bitmap_score(afl_state_t *afl, struct queue_entry *q,
    until the next run. The favored entries are given more air time during
    all fuzzing steps. */
 
+/* Monotonic nanosecond clock, used to accumulate afl->cull_time_ns. */
+
+static inline u64 now_ns(void) {
+
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+
+}
+
 void cull_queue(afl_state_t *afl) {
 
   if (likely(!afl->score_changed || afl->non_instrumented_mode)) { return; }
+
+  /* Only calls that get past the early return above are accounted for. */
+
+  u64 t_start = now_ns();
 
   u32 len = (afl->fsrv.map_size >> 3);
   u32 i;
@@ -1047,6 +1061,8 @@ void cull_queue(afl_state_t *afl) {
   }
 
   afl->reinit_table = 1;
+
+  afl->cull_time_ns += now_ns() - t_start;
 
 }
 

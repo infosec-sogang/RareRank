@@ -756,7 +756,8 @@ typedef struct afl_state {
       calibration_time_us,              /* Time spend on calibration        */
       sync_time_us,                     /* Time spend on sync               */
       cmplog_time_us,                   /* Time spend on cmplog             */
-      trim_time_us;                     /* Time spend on trimming           */
+      trim_time_us,                     /* Time spend on trimming           */
+      cull_time_ns;                     /* Time spend on queue culling      */
 
   u32 slowest_exec_ms,                  /* Slowest testcase non hang in ms  */
       subseq_tmouts;                    /* Number of timeouts in a row      */

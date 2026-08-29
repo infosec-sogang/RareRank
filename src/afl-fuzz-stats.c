@@ -392,6 +392,7 @@ void write_stats_file(afl_state_t *afl, u32 t_bytes, double bitmap_cvg,
           "cmplog_time       : %llu\n"
           "sync_time         : %llu\n"
           "trim_time         : %llu\n"
+          "cull_time         : %0.06f\n"
           "execs_done        : %llu\n"
           "execs_per_sec     : %0.02f\n"
           "execs_ps_last_min : %0.02f\n"
@@ -441,7 +442,7 @@ void write_stats_file(afl_state_t *afl, u32 t_bytes, double bitmap_cvg,
           (runtime_ms - MIN(runtime_ms, overhead_ms)) / 1000,
           afl->calibration_time_us / 1000000, afl->cmplog_time_us / 1000000,
           afl->sync_time_us / 1000000, afl->trim_time_us / 1000000,
-          afl->fsrv.total_execs,
+          (double)afl->cull_time_ns / 1000000000.0, afl->fsrv.total_execs,
           afl->fsrv.total_execs / ((double)(runtime_ms) / 1000),
           afl->last_avg_execs_saved, afl->queued_items, afl->queued_favored,
           afl->queued_discovered, afl->queued_imported, afl->queued_variable,
